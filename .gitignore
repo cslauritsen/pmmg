@@ -1,0 +1,7 @@
+.*.swp
+core
+*.log
+*.pyc
+*.pyo
+*delme*
+
