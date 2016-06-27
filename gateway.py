@@ -51,18 +51,19 @@ def m2g(msg):
     else:
         print 'WARNING unknown message sub type %s' % sub_type_s
 
-    print 'SWRITE: %d;%d;%d;%d;%d;%s' % (int(node_id), int(child_id), msg_type, int(ack_s), sub_type, msg.payload)
+    return '%d;%d;%d;%d;%d;%s' % (int(node_id), int(child_id), msg_type, int(ack_s), sub_type, msg.payload)
 
 def g2m(line):
     debug(line)
     try:
-        node_id, child_sensor_id, message_type, ack, sub_type, payload = line.split(';', 5)
-        message_type = int(message_type)
-        sub_type = int(sub_type)
+        node_id, child_sensor_id, msg_type_s, ack_s, sub_type_s, payload = line.split(';', 5)
+        message_type = int(msg_type_s)
+        sub_type = int(sub_type_s)
         topic='pmmg/out'
         topic = topic + '/' + node_id
         topic = topic + '/' + child_sensor_id
         topic = topic + '/' + mtypes.message_types[message_type]
+        #topic = topic + '/' + ack_s
         if message_type == mtypes.M_PRESENTATION:
             topic = topic + '/' + mtypes.presentation_sub_types[sub_type]
         elif message_type == mtypes.M_SET:
@@ -114,7 +115,6 @@ q = queue.Queue()
 try:
     #ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
     ser = serial.Serial(serialport, baud, timeout=1)
-    sio = io.TextIOWrapper(io.BufferedRWPair(ser, ser))
     info('Connected to Serial')
     sConnected=True
     mqttc.connect(host, port)
@@ -122,7 +122,7 @@ try:
     while go and sConnected:
         try:
             mqttc.loop_misc()
-            line = sio.readline().rstrip()
+            line = ser.readline().rstrip()
             if line != '':
                 g2m(line)
             mqttc.loop_write()
@@ -130,8 +130,11 @@ try:
                 mqttc.loop_read()
                 try:
                    m = q.get(False)
-                   m2g(m)
+                   txt = m2g(m) + "\n"
+                    # this worked with raw ser: ser.write('23;1;1;0;2;1'+"\n")
+                   ser.write(txt)
                    q.task_done()
+                   print 'Actuator msg: ', txt,
                 except queue.Empty:
                    break
         except IOError as ioe:
