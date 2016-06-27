@@ -59,7 +59,7 @@ def g2m(line):
         node_id, child_sensor_id, message_type, ack, sub_type, payload = line.split(';', 5)
         message_type = int(message_type)
         sub_type = int(sub_type)
-        topic='pmmg/out'
+        topic= topicroot + '/s2g'
         topic = topic + '/' + node_id
         topic = topic + '/' + child_sensor_id
         topic = topic + '/' + mtypes.message_types[message_type]
@@ -83,6 +83,7 @@ host='localhost'
 port=1883
 serialport=''
 baud=115200
+topicroot='pmmg'
 
 try:
     opts, args = getopt.getopt(sys.argv[1:], "b:dh:p:s:", ["baud=", "debug", "host=", "port=", "serial="])
@@ -108,17 +109,16 @@ signal.signal(signal.SIGTERM, sighndlr)
 
 mqttc = mqtt.Client()
 mqttc.on_message = on_message
-#mqttc.on_publish = on_publish
+mqttc.on_publish = on_publish
 
 q = queue.Queue()
 try:
-    #ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
     ser = serial.Serial(serialport, baud, timeout=1)
     sio = io.TextIOWrapper(io.BufferedRWPair(ser, ser))
     info('Connected to Serial')
     sConnected=True
     mqttc.connect(host, port)
-    mqttc.subscribe('pmmg/in/#', qos=2)
+    mqttc.subscribe(topicroot + '/g2s/#', qos=2)
     while go and sConnected:
         try:
             mqttc.loop_misc()
